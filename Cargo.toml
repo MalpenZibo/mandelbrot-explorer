@@ -1,17 +1,20 @@
 [package]
 name = "mandelbrot_explorer"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
-iced_winit = { version = "0.8.0" }
-iced_wgpu = { version = "0.9.0", features = ["webgl"] }
+iced_winit = { git = "https://github.com/iced-rs/iced.git" }
+iced_widget = { git = "https://github.com/iced-rs/iced.git", features = ["wgpu"] }
+iced_wgpu = { git = "https://github.com/iced-rs/iced.git" }
 bytemuck = { version = "1.4", features = ["derive"] }
-env_logger = "0.8"
+env_logger = "0.11"
+futures = { version ="0.3", features = ["executor"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
+iced_wgpu = { git = "https://github.com/iced-rs/iced.git", features = ["webgl"] }
 console_error_panic_hook = "0.1.7"
-console_log = "0.2.0"
+console_log = "1"
 log = "0.4"
 wasm-bindgen = "0.2"
 web-sys = { version = "0.3", features = [
@@ -20,7 +23,4 @@ web-sys = { version = "0.3", features = [
     "Window",
     "Document",
 ] }
-# This dependency a little bit quirky, it is deep in the tree and without `js` feature it
-# refuses to work with `wasm32-unknown-unknown target`. Unfortunately, we need this patch
-# to make it work
-getrandom = { version = "0.2", features = ["js"] }
+getrandom = { version = "0.3" }

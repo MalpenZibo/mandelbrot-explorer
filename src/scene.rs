@@ -1,4 +1,7 @@
-use iced_wgpu::wgpu::{self, BindGroupLayout, ShaderStages};
+use iced_wgpu::{
+    core::Color,
+    wgpu::{self, BindGroupLayout, ShaderStages},
+};
 
 use crate::{
     params::{ColorParams, Coordinates, Iterations, Viewport, Zoom},
@@ -62,29 +65,43 @@ impl Scene {
     }
 
     pub fn clear<'a>(
-        &self,
         target: &'a wgpu::TextureView,
         encoder: &'a mut wgpu::CommandEncoder,
+        background_color: Color,
     ) -> wgpu::RenderPass<'a> {
         encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: None,
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                 view: target,
+                depth_slice: None,
                 resolve_target: None,
                 ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(iced_wgpu::wgpu::Color::WHITE),
-                    store: true,
+                    load: wgpu::LoadOp::Clear({
+                        let [r, g, b, a] = background_color.into_linear();
+
+                        wgpu::Color {
+                            r: r as f64,
+                            g: g as f64,
+                            b: b as f64,
+                            a: a as f64,
+                        }
+                    }),
+                    store: wgpu::StoreOp::Store,
                 },
             })],
             depth_stencil_attachment: None,
+            timestamp_writes: None,
+            occlusion_query_set: None,
         })
     }
 
     pub fn resize(&mut self, window_size: [f32; 2]) {
+        println!("window_size: {:?}", window_size);
         self.viewport.set(Viewport::new(window_size));
     }
 
     pub fn move_center(&mut self, motion: (f32, f32)) {
+        println!("move center {:?}", motion);
         let change_x = motion.0 / self.viewport.half_viewport_x * 2. * self.coordinates.get_zoom();
         let change_y = motion.1 / self.viewport.half_viewport_y * 2. * self.coordinates.get_zoom();
 
@@ -129,7 +146,7 @@ impl Scene {
         self.color_params.set(self.color_params.set_link(hsl_link));
     }
 
-    pub fn draw<'a>(&'a mut self, queue: &wgpu::Queue, render_pass: &mut wgpu::RenderPass<'a>) {
+    pub fn draw<'a>(&'a mut self, render_pass: &mut wgpu::RenderPass<'a>, queue: &wgpu::Queue) {
         self.viewport.upload(queue);
         self.coordinates.upload(queue);
         self.iterations.upload(queue);
@@ -168,12 +185,13 @@ fn build_pipeline(
         layout: Some(&pipeline_layout),
         vertex: wgpu::VertexState {
             module: &shader,
-            entry_point: "vs_main",
+            entry_point: Some("vs_main"),
             buffers: &[],
+            compilation_options: wgpu::PipelineCompilationOptions::default(),
         },
         fragment: Some(wgpu::FragmentState {
             module: &shader,
-            entry_point: "fs_main",
+            entry_point: Some("fs_main"),
             targets: &[Some(wgpu::ColorTargetState {
                 format: texture_format,
                 blend: Some(wgpu::BlendState {
@@ -182,6 +200,7 @@ fn build_pipeline(
                 }),
                 write_mask: wgpu::ColorWrites::ALL,
             })],
+            compilation_options: wgpu::PipelineCompilationOptions::default(),
         }),
         primitive: wgpu::PrimitiveState {
             topology: wgpu::PrimitiveTopology::TriangleList,
@@ -195,5 +214,6 @@ fn build_pipeline(
             alpha_to_coverage_enabled: false,
         },
         multiview: None,
+        cache: None,
     })
 }

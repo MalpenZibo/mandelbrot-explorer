@@ -1,14 +1,19 @@
 use std::num::ParseIntError;
 
-use iced_wgpu::Renderer;
-use iced_winit::alignment::{Horizontal, Vertical};
-use iced_winit::widget::{checkbox, container, slider, text_input, Column, Row, Text};
-use iced_winit::{theme, Color, Command, Element, Length, Padding, Program};
+use iced_wgpu::{
+    Renderer,
+    core::{
+        Color, Element, Length, Padding,
+        alignment::{Horizontal, Vertical},
+    },
+};
+use iced_widget::{Column, Row, Text, Theme, checkbox, container, slider, text_input};
+use iced_winit::runtime::Task;
 
 pub struct Controls {
-    color: (f32, f32, f32),
-    color_linked: (bool, bool, bool),
-    iterations: i32,
+    pub color: (f32, f32, f32),
+    pub color_linked: (bool, bool, bool),
+    pub iterations: i32,
 }
 
 #[derive(Debug, Clone)]
@@ -27,24 +32,13 @@ impl Controls {
         }
     }
 
-    pub fn color(&self) -> (f32, f32, f32) {
-        self.color
-    }
-
-    pub fn color_link(&self) -> (bool, bool, bool) {
-        self.color_linked
-    }
-
-    pub fn iterations(&self) -> i32 {
-        self.iterations
+    pub fn background_color(&self) -> Color {
+        Color::TRANSPARENT
     }
 }
 
-impl Program for Controls {
-    type Renderer = Renderer;
-    type Message = Message;
-
-    fn update(&mut self, message: Message) -> Command<Message> {
+impl Controls {
+    pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::ColorChanged(hue, saturation, lightness) => {
                 self.color = (hue, saturation, lightness);
@@ -59,10 +53,10 @@ impl Program for Controls {
             }
         }
 
-        Command::none()
+        Task::none()
     }
 
-    fn view(&self) -> Element<Message, Renderer> {
+    pub fn view(&self) -> Element<'_, Message, Theme, Renderer> {
         let color = self.color;
         let color_linked = self.color_linked;
         let iterations = self.iterations;
@@ -72,50 +66,50 @@ impl Program for Controls {
             .spacing(20)
             .push(
                 Column::new()
-                    .push(Text::new("Hue").style(Color::WHITE))
+                    .push(Text::new("Hue").color(Color::WHITE))
                     .push(
                         slider(0.01..=1.0, color.0, move |hue| {
                             Message::ColorChanged(hue, color.1, color.2)
                         })
                         .step(0.01),
                     )
-                    .push(checkbox("Link?", color_linked.0, move |link| {
+                    .push(checkbox("Link?", color_linked.0).on_toggle(move |link| {
                         Message::ColorLinkChanged(link, color_linked.1, color_linked.2)
                     }))
                     .width(Length::Fill),
             )
             .push(
                 Column::new()
-                    .push(Text::new("Saturation").style(Color::WHITE))
+                    .push(Text::new("Saturation").color(Color::WHITE))
                     .push(
                         slider(0.0..=1.0, color.1, move |saturation| {
                             Message::ColorChanged(color.0, saturation, color.2)
                         })
                         .step(0.01),
                     )
-                    .push(checkbox("Link?", color_linked.1, move |link| {
+                    .push(checkbox("Link?", color_linked.1).on_toggle(move |link| {
                         Message::ColorLinkChanged(color_linked.0, link, color_linked.2)
                     }))
                     .width(Length::Fill),
             )
             .push(
                 Column::new()
-                    .push(Text::new("Lightness").style(Color::WHITE))
+                    .push(Text::new("Lightness").color(Color::WHITE))
                     .push(
                         slider(0.0..=1.0, color.2, move |lightness| {
                             Message::ColorChanged(color.0, color.1, lightness)
                         })
                         .step(0.01),
                     )
-                    .push(checkbox("Link?", color_linked.2, move |link| {
+                    .push(checkbox("Link?", color_linked.2).on_toggle(move |link| {
                         Message::ColorLinkChanged(color_linked.0, color_linked.1, link)
                     }))
                     .width(Length::Fill),
             )
             .push(
                 Column::new()
-                    .push(Text::new("Iterations").style(Color::WHITE))
-                    .push(text_input("", &iterations.to_string(), |v| {
+                    .push(Text::new("Iterations").color(Color::WHITE))
+                    .push(text_input("", &iterations.to_string()).on_input(|v| {
                         let parsed = if v.is_empty() {
                             Ok(0)
                         } else {
@@ -128,7 +122,6 @@ impl Program for Controls {
 
         container(
             container(controls)
-                .style(theme::Container::Box)
                 .height(Length::Shrink)
                 .width(Length::Fill)
                 .align_y(Vertical::Center)
